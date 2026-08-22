@@ -15,7 +15,10 @@ import {
 import type { ChartBar } from "@/lib/market/quotes";
 import type { ScanRow } from "@/lib/market/types";
 
+/** Visible bar count for default zoom + Y-scale window */
 const VIEW_BARS = 90;
+/** Pad as fraction of (high − low) in the window — keep tight */
+const RANGE_PAD = 0.02;
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
   const k = 2 / (period + 1);
@@ -38,7 +41,10 @@ function formatPx(n: number): string {
   return n.toPrecision(3);
 }
 
-/** Y range from the visible window only — tight pad so candles fill the plot. */
+/**
+ * Y range from the last VIEW_BARS only.
+ * Pad 2% of span so candles fill the plot (not a thin band at the top).
+ */
 function tightRange(bars: { high: number; low: number }[]): { min: number; max: number } | null {
   if (bars.length === 0) return null;
   const window = bars.slice(-VIEW_BARS);
@@ -50,8 +56,7 @@ function tightRange(bars: { high: number; low: number }[]): { min: number; max: 
   }
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
   const span = hi - lo || Math.abs(hi) * 0.01 || 0.01;
-  // ~2% pad (~4x tighter than the old 8% + full-history range)
-  const pad = Math.max(span * 0.02, Math.abs(hi) * 0.0004);
+  const pad = Math.max(span * RANGE_PAD, Math.abs(hi) * 0.0004);
   return { min: lo - pad, max: hi + pad };
 }
 
@@ -116,7 +121,6 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        // Almost all vertical room goes to price — volume is a thin strip
         scaleMargins: { top: 0.02, bottom: 0.08 },
         entireTextOnly: true,
       },
@@ -192,7 +196,6 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     );
 
     const line = (price: number, color: string, title: string) => {
-      // Only draw level if it sits inside the tight range (keeps scale clean)
       if (range && (price < range.min || price > range.max)) return;
       candles.createPriceLine({
         price,
