@@ -1,38 +1,27 @@
 # Chart scaling rules (Momo Desk)
 
-Use these exactly so candles stay readable (no 100–145 scale on a 131–137 name).
+Goal: **candles are tall and readable** — not a thin strip on a stretched axis.
 
-## Vertical (price) scale
+## Vertical (price) — make candles tall
 
-1. **Only use the visible window** for min/max — last **90 bars** (or whatever is on screen after zoom). Never scale to the full multi-day history.
-2. **min** = lowest low in that window  
-   **max** = highest high in that window
-3. **Pad = 2% of (max − min)**  
-   Floor: `max(span * 0.02, |max| * 0.0004)`  
-   Do **not** use 8%+ pad or full-session extremes.
-4. Wire that range through the candlestick series:
-   ```ts
-   autoscaleInfoProvider: () => ({
-     priceRange: { minValue: range.min, maxValue: range.max },
-   })
-   ```
-5. **Price scale margins**: `top: 0.02`, `bottom: 0.08` (price owns the plot).
-6. **Volume** on a **separate** `priceScaleId: "vol"` with `scaleMargins: { top: 0.92, bottom: 0 }` so it never stretches the candle axis.
-7. **HOD / LOD / AVWAP** price lines: only draw if the level is **inside** the tight range. Skip levels outside the window so they don’t fight the scale.
+1. Scale **only the last 50 bars** (visible window). Never full multi-day history.
+2. `min` = lowest low in window · `max` = highest high in window
+3. **Pad = 0.5% of (max − min)** — almost no empty space above/below
+4. Force range via `autoscaleInfoProvider` on the candlestick series
+5. Price scale margins: `top: 0.01`, `bottom: 0.05`
+6. Volume on separate `priceScaleId: "vol"` with `scaleMargins: { top: 0.95, bottom: 0 }`
+7. HOD / LOD / AVWAP lines only if inside the tight range
 
-## Horizontal (time) scale
+## Horizontal (time)
 
-1. Default visible range = last **90 bars** (+ small right offset).
-2. `barSpacing: 16`, `minBarSpacing: 8`.
-3. User can still pinch / scroll for more history; when they zoom, recompute min/max from **visible** bars if possible.
+1. Default view = last **50 bars**
+2. `barSpacing: 18`, `minBarSpacing: 10` (fat bodies)
 
-## Layout (full screen)
+## Layout
 
-1. Chart sheet = full viewport (`fixed inset-0`).
-2. Header + TF buttons + legend = fixed height at top.
-3. Plot host: `flex-1` with `minHeight: calc(100dvh - 12rem)` so the canvas is the main thing on the phone.
-4. Keep 9 EMA (green) and 20 EMA (white) as thick lines with last values on the legend.
+1. Full-screen chart sheet
+2. Plot: `minHeight: calc(100dvh - 11rem)`
 
-## App Builder one-liner
+## App Builder paste
 
-> Apply CHART_SCALING.md: Y scale from last 90 bars only, 2% pad, volume on separate scale, plot minHeight calc(100dvh - 12rem), default zoom last 90 bars. Candles must fill the plot — no empty half-screen below price.
+> Make candles a lot taller: Y scale from last 50 bars only, 0.5% pad, volume thin strip, barSpacing 18, plot minHeight calc(100dvh - 11rem). Candles must fill almost the full vertical plot.

@@ -15,10 +15,10 @@ import {
 import type { ChartBar } from "@/lib/market/quotes";
 import type { ScanRow } from "@/lib/market/types";
 
-/** Visible bar count for default zoom + Y-scale window */
-const VIEW_BARS = 90;
-/** Pad as fraction of (high − low) in the window — keep tight */
-const RANGE_PAD = 0.02;
+/** Fewer bars in view = narrower price range = taller candles */
+const VIEW_BARS = 50;
+/** Almost no pad — candles use nearly the full plot height */
+const RANGE_PAD = 0.005;
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
   const k = 2 / (period + 1);
@@ -41,10 +41,6 @@ function formatPx(n: number): string {
   return n.toPrecision(3);
 }
 
-/**
- * Y range from the last VIEW_BARS only.
- * Pad 2% of span so candles fill the plot (not a thin band at the top).
- */
 function tightRange(bars: { high: number; low: number }[]): { min: number; max: number } | null {
   if (bars.length === 0) return null;
   const window = bars.slice(-VIEW_BARS);
@@ -55,8 +51,8 @@ function tightRange(bars: { high: number; low: number }[]): { min: number; max: 
     if (b.high > hi) hi = b.high;
   }
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
-  const span = hi - lo || Math.abs(hi) * 0.01 || 0.01;
-  const pad = Math.max(span * RANGE_PAD, Math.abs(hi) * 0.0004);
+  const span = hi - lo || Math.abs(hi) * 0.008 || 0.01;
+  const pad = Math.max(span * RANGE_PAD, Math.abs(hi) * 0.0002);
   return { min: lo - pad, max: hi + pad };
 }
 
@@ -121,16 +117,16 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.02, bottom: 0.08 },
+        scaleMargins: { top: 0.01, bottom: 0.05 },
         entireTextOnly: true,
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 16,
-        minBarSpacing: 8,
-        rightOffset: 3,
+        barSpacing: 18,
+        minBarSpacing: 10,
+        rightOffset: 2,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -165,7 +161,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.92, bottom: 0 },
+      scaleMargins: { top: 0.95, bottom: 0 },
     });
     volume.setData(volData);
 
@@ -214,7 +210,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     const from = Math.max(0, total - VIEW_BARS);
     chart.timeScale().setVisibleLogicalRange({
       from: from - 0.5,
-      to: total + 1.5,
+      to: total + 1,
     });
 
     return () => {
@@ -225,7 +221,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   return (
     <div
       className="flex w-full flex-col"
-      style={{ height: "100%", minHeight: "calc(100dvh - 10rem)" }}
+      style={{ height: "100%", minHeight: "calc(100dvh - 9rem)" }}
     >
       <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-1 font-mono text-sm">
         <span className="font-semibold text-up">
@@ -243,12 +239,12 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       <div
         ref={host}
         className="w-full flex-1"
-        style={{ minHeight: "calc(100dvh - 12rem)" }}
+        style={{ minHeight: "calc(100dvh - 11rem)" }}
         role="img"
-        aria-label="Tight scale chart with 9 EMA and 20 EMA"
+        aria-label="Tall candle chart with 9 EMA and 20 EMA"
       />
       <p className="shrink-0 pt-1 text-xs text-muted">
-        Tight scale · Green 9 EMA · White 20 EMA · Gold AVWAP · Pinch zoom
+        Tall candles · Green 9 EMA · White 20 EMA · Gold AVWAP
       </p>
     </div>
   );
