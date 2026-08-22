@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
+  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
   ColorType,
   LineStyle,
+  CrosshairMode,
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
@@ -35,6 +37,18 @@ function formatPx(n: number): string {
   return n.toPrecision(3);
 }
 
+/** Drop one-bar spikes that blow out the Y scale (bad ticks). */
+function tightRange(bars: { high: number; low: number }[]): { min: number; max: number } | null {
+  if (bars.length === 0) return null;
+  const highs = bars.map((b) => b.high).sort((a, b) => a - b);
+  const lows = bars.map((b) => b.low).sort((a, b) => a - b);
+  // Use 2nd–98th percentile style: skip single extreme if many bars
+  const lo = bars.length > 20 ? lows[Math.floor(bars.length * 0.02)]! : lows[0]!;
+  const hi = bars.length > 20 ? highs[Math.floor(bars.length * 0.98)]! : highs[highs.length - 1]!;
+  const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
+  return { min: lo - pad, max: hi + pad };
+}
+
 export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   const host = useRef<HTMLDivElement>(null);
 
@@ -51,7 +65,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       volData.push({
         time,
         value: bar.v || 0,
-        color: bar.c >= bar.o ? "rgba(45, 255, 134, 0.5)" : "rgba(238, 91, 91, 0.5)",
+        color: bar.c >= bar.o ? "rgba(45, 255, 134, 0.55)" : "rgba(238, 91, 91, 0.55)",
       });
       closes.push(bar.c);
     }
@@ -59,12 +73,12 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     const e20 = emaSeries(closes, 20);
     const last9 = [...e9].reverse().find((v) => v != null) ?? null;
     const last20 = [...e20].reverse().find((v) => v != null) ?? null;
-    return { candleData, volData, e9, e20, last9, last20 };
+    return { candleData, volData, e9, e20, last9, last20, range: tightRange(candleData) };
   }, [bars]);
 
   useEffect(() => {
     const el = host.current;
-    const { candleData, volData, e9, e20 } = packed;
+    const { candleData, volData, e9, e20, range } = packed;
     if (!el || candleData.length < 2) return;
 
     const chart: IChartApi = createChart(el, {
@@ -80,15 +94,15 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
         horzLines: { color: "#1a1d25" },
       },
       crosshair: {
-        mode: 0,
+        mode: CrosshairMode.Magnet,
         vertLine: {
-          color: "rgba(45, 255, 134, 0.55)",
+          color: "rgba(45, 255, 134, 0.6)",
           width: 1,
           style: LineStyle.Solid,
           labelBackgroundColor: "#0d3d24",
         },
         horzLine: {
-          color: "rgba(45, 255, 134, 0.55)",
+          color: "rgba(45, 255, 134, 0.6)",
           width: 1,
           style: LineStyle.Solid,
           labelBackgroundColor: "#0d3d24",
@@ -96,15 +110,16 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.05, bottom: 0.16 },
+        scaleMargins: { top: 0.04, bottom: 0.14 },
+        entireTextOnly: true,
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 16,
-        minBarSpacing: 8,
-        rightOffset: 8,
+        barSpacing: 14,
+        minBarSpacing: 6,
+        rightOffset: 4,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -120,6 +135,16 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: true,
       priceLineColor: "#2dff86",
       priceLineWidth: 1,
+      // Keep Y scale on real price action, not one bad tick
+      autoscaleInfoProvider: () => {
+        if (!range) return null;
+        return {
+          priceRange: {
+            minValue: range.min,
+            maxValue: range.max,
+          },
+        };
+      },
     });
     candles.setData(candleData);
 
@@ -160,11 +185,12 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       candleData.flatMap((bar, i) => (e20[i] == null ? [] : [{ time: bar.time, value: e20[i]! }])),
     );
 
+    // Only the 3 levels that matter — less clutter on the right
     const line = (price: number, color: string, title: string) => {
       candles.createPriceLine({
         price,
         color,
-        lineWidth: 1,
+        lineWidth: 2,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
         title,
@@ -174,7 +200,13 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     if (row.high) line(row.high, "#2dff86", "HOD");
     if (row.low) line(row.low, "#ee5b5b", "LOD");
 
-    chart.timeScale().fitContent();
+    // Show last ~90 bars so candles are fat and readable (not whole week squeezed)
+    const total = candleData.length;
+    const from = Math.max(0, total - 90);
+    chart.timeScale().setVisibleLogicalRange({
+      from: from - 0.5,
+      to: total + 2,
+    });
 
     return () => {
       chart.remove();
@@ -182,8 +214,11 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   }, [packed, row.vwap, row.high, row.low]);
 
   return (
-    <div className="flex h-full flex-col" style={{ minHeight: "88vh" }}>
-      <div className="flex shrink-0 flex-wrap gap-x-4 gap-y-1 pb-2 font-mono text-sm">
+    <div
+      className="flex w-full flex-col"
+      style={{ height: "100%", minHeight: "calc(100dvh - 11rem)" }}
+    >
+      <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-2 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
         </span>
@@ -199,12 +234,12 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       <div
         ref={host}
         className="w-full flex-1"
-        style={{ minHeight: "78vh" }}
+        style={{ minHeight: "calc(100dvh - 14rem)" }}
         role="img"
-        aria-label="Chart with 9 EMA and 20 EMA"
+        aria-label="Full screen chart with 9 EMA and 20 EMA"
       />
       <p className="shrink-0 pt-1 text-xs text-muted">
-        Green = 9 EMA · White = 20 EMA · Gold dashed = AVWAP
+        Green = 9 EMA · White = 20 EMA · Gold = AVWAP · Pinch to zoom · Scroll for more history
       </p>
     </div>
   );
