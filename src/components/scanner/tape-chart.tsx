@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -27,13 +27,18 @@ function emaSeries(closes: number[], period: number): (number | null)[] {
   return out;
 }
 
+function formatPx(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000) return n.toFixed(2);
+  if (n >= 1) return n.toFixed(2);
+  if (n >= 0.01) return n.toFixed(4);
+  return n.toPrecision(3);
+}
+
 export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   const host = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = host.current;
-    if (!el || bars.length < 2) return;
-
+  const packed = useMemo(() => {
     const seen = new Set<number>();
     const candleData: { time: UTCTimestamp; open: number; high: number; low: number; close: number }[] = [];
     const volData: { time: UTCTimestamp; value: number; color: string }[] = [];
@@ -46,37 +51,60 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       volData.push({
         time,
         value: bar.v || 0,
-        color: bar.c >= bar.o ? "rgba(45, 255, 134, 0.45)" : "rgba(238, 91, 91, 0.45)",
+        color: bar.c >= bar.o ? "rgba(45, 255, 134, 0.5)" : "rgba(238, 91, 91, 0.5)",
       });
       closes.push(bar.c);
     }
-    if (candleData.length < 2) return;
+    const e9 = emaSeries(closes, 9);
+    const e20 = emaSeries(closes, 20);
+    const last9 = [...e9].reverse().find((v) => v != null) ?? null;
+    const last20 = [...e20].reverse().find((v) => v != null) ?? null;
+    return { candleData, volData, e9, e20, last9, last20 };
+  }, [bars]);
+
+  useEffect(() => {
+    const el = host.current;
+    const { candleData, volData, e9, e20 } = packed;
+    if (!el || candleData.length < 2) return;
 
     const chart: IChartApi = createChart(el, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: "#111318" },
-        textColor: "#8b919c",
+        background: { type: ColorType.Solid, color: "#07080a" },
+        textColor: "#c5ccd6",
         fontFamily: "IBM Plex Mono, ui-monospace, monospace",
-        fontSize: 11,
+        fontSize: 12,
       },
       grid: {
-        vertLines: { color: "#262a33" },
-        horzLines: { color: "#262a33" },
+        vertLines: { color: "#1a1d25" },
+        horzLines: { color: "#1a1d25" },
       },
       crosshair: {
         mode: 0,
-        vertLine: { color: "rgba(45, 255, 134, 0.45)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#2dff86" },
-        horzLine: { color: "rgba(45, 255, 134, 0.45)", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#2dff86" },
+        vertLine: {
+          color: "rgba(45, 255, 134, 0.55)",
+          width: 1,
+          style: LineStyle.Solid,
+          labelBackgroundColor: "#0d3d24",
+        },
+        horzLine: {
+          color: "rgba(45, 255, 134, 0.55)",
+          width: 1,
+          style: LineStyle.Solid,
+          labelBackgroundColor: "#0d3d24",
+        },
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.08, bottom: 0.22 },
+        scaleMargins: { top: 0.1, bottom: 0.22 },
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
+        barSpacing: 12,
+        minBarSpacing: 6,
+        rightOffset: 6,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -85,38 +113,50 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     const candles = chart.addSeries(CandlestickSeries, {
       upColor: "#2dff86",
       downColor: "#ee5b5b",
-      borderUpColor: "#2dff86",
-      borderDownColor: "#ee5b5b",
+      borderVisible: false,
       wickUpColor: "#2dff86",
       wickDownColor: "#ee5b5b",
+      lastValueVisible: true,
+      priceLineVisible: true,
+      priceLineColor: "#2dff86",
+      priceLineWidth: 1,
     });
     candles.setData(candleData);
 
     const volume = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
       priceScaleId: "vol",
+      lastValueVisible: false,
+      priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.82, bottom: 0 },
+      scaleMargins: { top: 0.84, bottom: 0 },
     });
     volume.setData(volData);
 
-    const e9 = emaSeries(closes, 9);
-    const e20 = emaSeries(closes, 20);
+    // 9 EMA — neon green, thick, label on right
     const ema9 = chart.addSeries(LineSeries, {
       color: "#2dff86",
-      lineWidth: 2,
+      lineWidth: 3,
       priceLineVisible: false,
-      lastValueVisible: false,
+      lastValueVisible: true,
+      title: "9 EMA",
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
     });
     ema9.setData(
       candleData.flatMap((bar, i) => (e9[i] == null ? [] : [{ time: bar.time, value: e9[i]! }])),
     );
+
+    // 20 EMA — white/silver, thick, label on right
     const ema20 = chart.addSeries(LineSeries, {
-      color: "#8b919c",
-      lineWidth: 2,
+      color: "#e8eaee",
+      lineWidth: 3,
       priceLineVisible: false,
-      lastValueVisible: false,
+      lastValueVisible: true,
+      title: "20 EMA",
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
     });
     ema20.setData(
       candleData.flatMap((bar, i) => (e20[i] == null ? [] : [{ time: bar.time, value: e20[i]! }])),
@@ -133,8 +173,6 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       });
     };
     if (row.vwap) line(row.vwap, "#e2c15a", "AVWAP");
-    if (row.avwapLod) line(row.avwapLod, "#2dff86", "AVWAP LOD");
-    if (row.avwapHod) line(row.avwapHod, "#ee5b5b", "AVWAP HOD");
     if (row.high) line(row.high, "#2dff86", "HOD");
     if (row.low) line(row.low, "#ee5b5b", "LOD");
 
@@ -143,7 +181,27 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     return () => {
       chart.remove();
     };
-  }, [bars, row.vwap, row.avwapLod, row.avwapHod, row.high, row.low]);
+  }, [packed, row.vwap, row.high, row.low]);
 
-  return <div ref={host} className="h-96 w-full" role="img" aria-label="Intraday candlestick chart" />;
+  return (
+    <div className="flex h-full min-h-96 flex-col">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 pb-2 font-mono text-sm">
+        <span className="font-semibold text-up">
+          9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
+        </span>
+        <span className="font-semibold text-fg">
+          20 EMA {packed.last20 != null ? formatPx(packed.last20) : "—"}
+        </span>
+        {row.vwap != null ? (
+          <span className="text-wait">AVWAP {formatPx(row.vwap)}</span>
+        ) : null}
+        {row.high != null ? <span className="text-up">HOD {formatPx(row.high)}</span> : null}
+        {row.low != null ? <span className="text-down">LOD {formatPx(row.low)}</span> : null}
+      </div>
+      <div ref={host} className="min-h-96 w-full flex-1" role="img" aria-label="Chart with 9 EMA and 20 EMA" />
+      <p className="pt-1 text-xs text-muted">
+        Green line = 9 EMA · White line = 20 EMA · Gold dashed = AVWAP
+      </p>
+    </div>
+  );
 }
