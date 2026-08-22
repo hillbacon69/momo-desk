@@ -73,7 +73,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
         background: { type: ColorType.Solid, color: "#07080a" },
         textColor: "#c5ccd6",
         fontFamily: "IBM Plex Mono, ui-monospace, monospace",
-        fontSize: 12,
+        fontSize: 13,
       },
       grid: {
         vertLines: { color: "#1a1d25" },
@@ -96,15 +96,15 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.1, bottom: 0.22 },
+        scaleMargins: { top: 0.06, bottom: 0.18 },
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 12,
-        minBarSpacing: 6,
-        rightOffset: 6,
+        barSpacing: 16,
+        minBarSpacing: 8,
+        rightOffset: 8,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -130,11 +130,10 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.84, bottom: 0 },
+      scaleMargins: { top: 0.86, bottom: 0 },
     });
     volume.setData(volData);
 
-    // 9 EMA — neon green, thick, label on right
     const ema9 = chart.addSeries(LineSeries, {
       color: "#2dff86",
       lineWidth: 3,
@@ -148,7 +147,6 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       candleData.flatMap((bar, i) => (e9[i] == null ? [] : [{ time: bar.time, value: e9[i]! }])),
     );
 
-    // 20 EMA — white/silver, thick, label on right
     const ema20 = chart.addSeries(LineSeries, {
       color: "#e8eaee",
       lineWidth: 3,
@@ -184,7 +182,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   }, [packed, row.vwap, row.high, row.low]);
 
   return (
-    <div className="flex h-full min-h-96 flex-col">
+    <div className="flex h-full flex-col" style={{ minHeight: "70vh" }}>
       <div className="flex flex-wrap gap-x-4 gap-y-1 pb-2 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
@@ -198,9 +196,15 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
         {row.high != null ? <span className="text-up">HOD {formatPx(row.high)}</span> : null}
         {row.low != null ? <span className="text-down">LOD {formatPx(row.low)}</span> : null}
       </div>
-      <div ref={host} className="min-h-96 w-full flex-1" role="img" aria-label="Chart with 9 EMA and 20 EMA" />
+      <div
+        ref={host}
+        className="w-full flex-1"
+        style={{ minHeight: "62vh" }}
+        role="img"
+        aria-label="Chart with 9 EMA and 20 EMA"
+      />
       <p className="pt-1 text-xs text-muted">
-        Green line = 9 EMA · White line = 20 EMA · Gold dashed = AVWAP
+        Green = 9 EMA · White = 20 EMA · Gold dashed = AVWAP
       </p>
     </div>
   );
