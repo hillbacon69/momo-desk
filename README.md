@@ -6,11 +6,16 @@ Live tape scanner with 4D neon buttons and TradingView [lightweight-charts](http
 
 Mash **CHART** on a name.
 
-- **5m / 15m / 1H / 1D** timeframes
-- Neon green / red candles
-- Volume histogram
-- 9 EMA (green) / 20 EMA (gray)
-- Price lines: session AVWAP, AVWAP from LOD, AVWAP from HOD, HOD, LOD
-- Crosshair, scroll, pinch zoom
+- **5 MIN / 15 MIN / 1 HR / 1 DAY**
+- Neon candles, volume, 9/20 EMA, AVWAP / HOD / LOD
+- Pattern arrows: HAMMER, DOJI, ENGULF, STAR, MORNING, EVENING, MARU
 
-Live desk: this repo holds the chart module. The running scanner is the Grok app preview.
+## GROK button
+
+Opens an **Ideas** sheet (not a blank grok.com tab):
+
+- Build history from this desk
+- Idea chips to copy
+- Your note + **OPEN GROK WITH PROMPT** to push updates
+
+See `src/components/scanner/GROK_BUTTON.md` and `grok-ideas.tsx`.
