@@ -15,10 +15,10 @@ import {
 import type { ChartBar } from "@/lib/market/quotes";
 import type { ScanRow } from "@/lib/market/types";
 
-/** Fewer bars in view = narrower price range = taller candles */
-const VIEW_BARS = 50;
-/** Almost no pad — candles use nearly the full plot height */
-const RANGE_PAD = 0.005;
+/** Tight window → narrow price range → max candle height */
+const VIEW_BARS = 30;
+/** 10x tighter than 0.5% pad */
+const RANGE_PAD = 0.0005;
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
   const k = 2 / (period + 1);
@@ -51,8 +51,8 @@ function tightRange(bars: { high: number; low: number }[]): { min: number; max: 
     if (b.high > hi) hi = b.high;
   }
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
-  const span = hi - lo || Math.abs(hi) * 0.008 || 0.01;
-  const pad = Math.max(span * RANGE_PAD, Math.abs(hi) * 0.0002);
+  const span = hi - lo || Math.abs(hi) * 0.005 || 0.01;
+  const pad = Math.max(span * RANGE_PAD, Math.abs(hi) * 0.00005);
   return { min: lo - pad, max: hi + pad };
 }
 
@@ -117,15 +117,15 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.01, bottom: 0.05 },
+        scaleMargins: { top: 0, bottom: 0.04 },
         entireTextOnly: true,
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 18,
-        minBarSpacing: 10,
+        barSpacing: 20,
+        minBarSpacing: 12,
         rightOffset: 2,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
@@ -161,7 +161,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.95, bottom: 0 },
+      scaleMargins: { top: 0.96, bottom: 0 },
     });
     volume.setData(volData);
 
@@ -241,10 +241,10 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
         className="w-full flex-1"
         style={{ minHeight: "calc(100dvh - 11rem)" }}
         role="img"
-        aria-label="Tall candle chart with 9 EMA and 20 EMA"
+        aria-label="Max height candle chart"
       />
       <p className="shrink-0 pt-1 text-xs text-muted">
-        Tall candles · Green 9 EMA · White 20 EMA · Gold AVWAP
+        10x tight · Green 9 EMA · White 20 EMA · Gold AVWAP
       </p>
     </div>
   );
