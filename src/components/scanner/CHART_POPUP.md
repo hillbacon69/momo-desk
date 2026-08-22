@@ -1,30 +1,25 @@
-# Chart popup layout
+# Chart popup — Look for in the charts section
 
-## Charts section (order)
+## Order (top → bottom)
 
-1. Ticker + price + TF buttons (5 MIN / 15 MIN / 1 HR / 1 DAY)
+1. Ticker + price + TF buttons
 2. EMA legend (9 / 20 / AVWAP / HOD / LOD)
-3. **Look for** ← inside the charts section
-   - `going.label` (colored)
-   - `Look for · {going.lookFor}`
-4. TapeChart plot (tight scale)
-5. Optional story + news under the plot
+3. **Look for** (going.label + lookFor) ← **in the charts section**
+4. Candle plot
+5. Optional story / news under plot
 
 ## Wire it
 
 ```tsx
-import { ChartLookFor, ChartDetails } from "@/components/scanner/chart-details";
-
 const going = goingWhere(row);
 
-// INSIDE the charts block, above the plot:
-<ChartLookFor going={going} />
-<TapeChart bars={bars} row={row} />
-
-// Optional under plot:
-<ChartDetails row={row} going={going} news={news} />
+<TapeChart bars={bars} row={row} going={going} />
 ```
+
+`going` is required for Look for to show above the candles.
+
+Do **not** leave Look for only in a footer away from the chart.
 
 ## App Builder paste
 
-> Take Look for and put it in the charts section — directly under the 9/20/AVWAP legend and above the candle plot. Show going.label and "Look for · …" there. Do not leave Look for only in a footer away from the chart.
+> Put Look for in the charts section. Pass goingWhere(row) into TapeChart as going={going}. Show going.label and "Look for · …" under the 9/20/AVWAP legend and above the candle plot. Remove duplicate Look for from any footer if it is still only there.

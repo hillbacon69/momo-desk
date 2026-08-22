@@ -15,10 +15,14 @@ import {
 import type { ChartBar } from "@/lib/market/quotes";
 import type { ScanRow } from "@/lib/market/types";
 
-/** Tight window → narrow price range → max candle height */
 const VIEW_BARS = 30;
-/** 10x tighter than 0.5% pad */
 const RANGE_PAD = 0.0005;
+
+export type ChartGoing = {
+  label: string;
+  lookFor: string;
+  tone: "up" | "down" | "wait";
+};
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
   const k = 2 / (period + 1);
@@ -56,7 +60,16 @@ function tightRange(bars: { high: number; low: number }[]): { min: number; max: 
   return { min: lo - pad, max: hi + pad };
 }
 
-export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
+export function TapeChart({
+  bars,
+  row,
+  going,
+}: {
+  bars: ChartBar[];
+  row: ScanRow;
+  /** When set, Look for renders inside the charts section above the plot */
+  going?: ChartGoing | null;
+}) {
   const host = useRef<HTMLDivElement>(null);
 
   const packed = useMemo(() => {
@@ -218,11 +231,15 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     };
   }, [packed, row.vwap, row.high, row.low]);
 
+  const toneClass =
+    going?.tone === "up" ? "text-up" : going?.tone === "down" ? "text-down" : "text-wait";
+
   return (
     <div
       className="flex w-full flex-col"
       style={{ height: "100%", minHeight: "calc(100dvh - 9rem)" }}
     >
+      {/* EMA legend */}
       <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-1 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
@@ -236,16 +253,25 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
         {row.high != null ? <span className="text-up">HOD {formatPx(row.high)}</span> : null}
         {row.low != null ? <span className="text-down">LOD {formatPx(row.low)}</span> : null}
       </div>
+
+      {/* LOOK FOR — inside charts section, above the plot */}
+      {going ? (
+        <div className="shrink-0 space-y-1 border-b border-border pb-2 pt-1">
+          <p className={`text-sm font-semibold ${toneClass}`}>{going.label}</p>
+          <p className="text-sm leading-snug text-fg">
+            <span className="font-mono text-xs tracking-widest text-lit uppercase">Look for · </span>
+            {going.lookFor}
+          </p>
+        </div>
+      ) : null}
+
       <div
         ref={host}
         className="w-full flex-1"
-        style={{ minHeight: "calc(100dvh - 11rem)" }}
+        style={{ minHeight: "calc(100dvh - 14rem)" }}
         role="img"
-        aria-label="Max height candle chart"
+        aria-label="Candle chart"
       />
-      <p className="shrink-0 pt-1 text-xs text-muted">
-        10x tight · Green 9 EMA · White 20 EMA · Gold AVWAP
-      </p>
     </div>
   );
 }
