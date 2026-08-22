@@ -1,11 +1,9 @@
 "use client";
 
 /**
- * Detail strip for the chart popup.
- * Shows what the name is doing + what to look for when you mash CHART.
- *
- * Wire in ChartSheet:
- *   <ChartDetails row={row} going={goingWhere(row)} news={news} />
+ * Chart-section detail block.
+ * "Look for" sits IN the charts section (under the EMA legend / above the plot),
+ * not buried in a separate footer only.
  */
 
 export type GoingRead = {
@@ -78,6 +76,27 @@ function buildStory(row: DetailRow, going: GoingRead): string {
   return parts.join(" ");
 }
 
+/** Lives inside the charts section — Look for is the main line. */
+export function ChartLookFor({
+  going,
+}: {
+  going: GoingRead;
+}) {
+  const toneClass =
+    going.tone === "up" ? "text-up" : going.tone === "down" ? "text-down" : "text-wait";
+
+  return (
+    <div className="shrink-0 space-y-1 border-b border-border pb-2">
+      <p className={`text-sm font-semibold ${toneClass}`}>{going.label}</p>
+      <p className="text-sm leading-snug text-fg">
+        <span className="font-mono text-xs tracking-widest text-lit uppercase">Look for · </span>
+        {going.lookFor}
+      </p>
+    </div>
+  );
+}
+
+/** Optional fuller story + levels under the plot. */
 export function ChartDetails({
   row,
   going,
@@ -87,18 +106,11 @@ export function ChartDetails({
   going: GoingRead;
   news?: string;
 }) {
-  const toneClass =
-    going.tone === "up" ? "text-up" : going.tone === "down" ? "text-down" : "text-wait";
   const story = buildStory(row, going);
 
   return (
-    <div className="shrink-0 space-y-2 border-t border-border px-4 py-3">
-      <p className={`text-base font-semibold ${toneClass}`}>{going.label}</p>
+    <div className="shrink-0 space-y-2 border-t border-border px-0 py-2">
       <p className="text-sm leading-relaxed text-fg">{story}</p>
-      <p className="text-sm text-fg">
-        <span className="font-mono text-xs tracking-widest text-muted uppercase">Look for · </span>
-        {going.lookFor}
-      </p>
       <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-muted">
         <span>Last {fmtPx(row.price)}</span>
         <span className={row.changeRatio >= 0 ? "text-up" : "text-down"}>{fmtPct(row.changeRatio)}</span>

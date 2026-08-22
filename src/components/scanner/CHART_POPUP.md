@@ -1,35 +1,30 @@
-# Chart popup — show what the stock is doing
+# Chart popup layout
 
-When the user mashes **CHART** on a tape row, the popup must include a detail panel under (or over) the plot.
+## Charts section (order)
 
-## Required block
+1. Ticker + price + TF buttons (5 MIN / 15 MIN / 1 HR / 1 DAY)
+2. EMA legend (9 / 20 / AVWAP / HOD / LOD)
+3. **Look for** ← inside the charts section
+   - `going.label` (colored)
+   - `Look for · {going.lookFor}`
+4. TapeChart plot (tight scale)
+5. Optional story + news under the plot
+
+## Wire it
 
 ```tsx
-import { ChartDetails } from "@/components/scanner/chart-details";
+import { ChartLookFor, ChartDetails } from "@/components/scanner/chart-details";
 
-// inside ChartSheet, after TapeChart:
-<ChartDetails
-  row={row}
-  going={goingWhere(row)}
-  news={news}
-/>
+const going = goingWhere(row);
+
+// INSIDE the charts block, above the plot:
+<ChartLookFor going={going} />
+<TapeChart bars={bars} row={row} />
+
+// Optional under plot:
+<ChartDetails row={row} going={going} news={news} />
 ```
-
-## What it shows
-
-1. **Headline** — `going.label` (e.g. "Holding AVWAP, bias up") in green / red / wait color
-2. **Story** — plain English: up/down %, 9 vs 20, above/below AVWAP, setup flag
-3. **Look for** — `going.lookFor` (what to watch next)
-4. **Levels strip** — Last, %, 9 EMA, 20 EMA, AVWAP, HOD, LOD
-5. **News** — headline if any
-
-## Layout
-
-- Full-screen chart sheet
-- Top: ticker + TF buttons (5 MIN / 15 MIN / 1 HR / 1 DAY)
-- Middle: TapeChart (tight scale)
-- Bottom (always visible, not buried): **ChartDetails**
 
 ## App Builder paste
 
-> On the chart popup, under the plot, show what the stock is doing: goingWhere label, a short plain-English story (%, 9 vs 20, above/below AVWAP), Look for text, levels (9/20/AVWAP/HOD/LOD), and news. Use ChartDetails from hillbacon69/momo-desk chart-details.tsx. Keep it visible without scrolling away from the chart if possible.
+> Take Look for and put it in the charts section — directly under the 9/20/AVWAP legend and above the candle plot. Show going.label and "Look for · …" there. Do not leave Look for only in a footer away from the chart.
