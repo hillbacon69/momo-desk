@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   createChart,
-  createSeriesMarkers,
   CandlestickSeries,
   HistogramSeries,
   LineSeries,
@@ -15,6 +14,8 @@ import {
 } from "lightweight-charts";
 import type { ChartBar } from "@/lib/market/quotes";
 import type { ScanRow } from "@/lib/market/types";
+
+const VIEW_BARS = 90;
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
   const k = 2 / (period + 1);
@@ -37,15 +38,20 @@ function formatPx(n: number): string {
   return n.toPrecision(3);
 }
 
-/** Drop one-bar spikes that blow out the Y scale (bad ticks). */
+/** Y range from the visible window only — tight pad so candles fill the plot. */
 function tightRange(bars: { high: number; low: number }[]): { min: number; max: number } | null {
   if (bars.length === 0) return null;
-  const highs = bars.map((b) => b.high).sort((a, b) => a - b);
-  const lows = bars.map((b) => b.low).sort((a, b) => a - b);
-  // Use 2nd–98th percentile style: skip single extreme if many bars
-  const lo = bars.length > 20 ? lows[Math.floor(bars.length * 0.02)]! : lows[0]!;
-  const hi = bars.length > 20 ? highs[Math.floor(bars.length * 0.98)]! : highs[highs.length - 1]!;
-  const pad = Math.max((hi - lo) * 0.08, hi * 0.002);
+  const window = bars.slice(-VIEW_BARS);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const b of window) {
+    if (b.low < lo) lo = b.low;
+    if (b.high > hi) hi = b.high;
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+  const span = hi - lo || Math.abs(hi) * 0.01 || 0.01;
+  // ~2% pad (~4x tighter than the old 8% + full-history range)
+  const pad = Math.max(span * 0.02, Math.abs(hi) * 0.0004);
   return { min: lo - pad, max: hi + pad };
 }
 
@@ -110,16 +116,17 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.04, bottom: 0.14 },
+        // Almost all vertical room goes to price — volume is a thin strip
+        scaleMargins: { top: 0.02, bottom: 0.08 },
         entireTextOnly: true,
       },
       timeScale: {
         borderColor: "#262a33",
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 14,
-        minBarSpacing: 6,
-        rightOffset: 4,
+        barSpacing: 16,
+        minBarSpacing: 8,
+        rightOffset: 3,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -135,7 +142,6 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: true,
       priceLineColor: "#2dff86",
       priceLineWidth: 1,
-      // Keep Y scale on real price action, not one bad tick
       autoscaleInfoProvider: () => {
         if (!range) return null;
         return {
@@ -155,7 +161,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.88, bottom: 0 },
+      scaleMargins: { top: 0.92, bottom: 0 },
     });
     volume.setData(volData);
 
@@ -185,8 +191,9 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       candleData.flatMap((bar, i) => (e20[i] == null ? [] : [{ time: bar.time, value: e20[i]! }])),
     );
 
-    // Only the 3 levels that matter — less clutter on the right
     const line = (price: number, color: string, title: string) => {
+      // Only draw level if it sits inside the tight range (keeps scale clean)
+      if (range && (price < range.min || price > range.max)) return;
       candles.createPriceLine({
         price,
         color,
@@ -200,12 +207,11 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
     if (row.high) line(row.high, "#2dff86", "HOD");
     if (row.low) line(row.low, "#ee5b5b", "LOD");
 
-    // Show last ~90 bars so candles are fat and readable (not whole week squeezed)
     const total = candleData.length;
-    const from = Math.max(0, total - 90);
+    const from = Math.max(0, total - VIEW_BARS);
     chart.timeScale().setVisibleLogicalRange({
       from: from - 0.5,
-      to: total + 2,
+      to: total + 1.5,
     });
 
     return () => {
@@ -216,9 +222,9 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   return (
     <div
       className="flex w-full flex-col"
-      style={{ height: "100%", minHeight: "calc(100dvh - 11rem)" }}
+      style={{ height: "100%", minHeight: "calc(100dvh - 10rem)" }}
     >
-      <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-2 font-mono text-sm">
+      <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-1 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
         </span>
@@ -234,12 +240,12 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       <div
         ref={host}
         className="w-full flex-1"
-        style={{ minHeight: "calc(100dvh - 14rem)" }}
+        style={{ minHeight: "calc(100dvh - 12rem)" }}
         role="img"
-        aria-label="Full screen chart with 9 EMA and 20 EMA"
+        aria-label="Tight scale chart with 9 EMA and 20 EMA"
       />
       <p className="shrink-0 pt-1 text-xs text-muted">
-        Green = 9 EMA · White = 20 EMA · Gold = AVWAP · Pinch to zoom · Scroll for more history
+        Tight scale · Green 9 EMA · White 20 EMA · Gold AVWAP · Pinch zoom
       </p>
     </div>
   );
