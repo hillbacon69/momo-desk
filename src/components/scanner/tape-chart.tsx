@@ -96,7 +96,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       },
       rightPriceScale: {
         borderColor: "#262a33",
-        scaleMargins: { top: 0.06, bottom: 0.18 },
+        scaleMargins: { top: 0.05, bottom: 0.16 },
       },
       timeScale: {
         borderColor: "#262a33",
@@ -130,7 +130,7 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       priceLineVisible: false,
     });
     volume.priceScale().applyOptions({
-      scaleMargins: { top: 0.86, bottom: 0 },
+      scaleMargins: { top: 0.88, bottom: 0 },
     });
     volume.setData(volData);
 
@@ -182,8 +182,8 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
   }, [packed, row.vwap, row.high, row.low]);
 
   return (
-    <div className="flex h-full flex-col" style={{ minHeight: "70vh" }}>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 pb-2 font-mono text-sm">
+    <div className="flex h-full flex-col" style={{ minHeight: "88vh" }}>
+      <div className="flex shrink-0 flex-wrap gap-x-4 gap-y-1 pb-2 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
         </span>
@@ -199,11 +199,11 @@ export function TapeChart({ bars, row }: { bars: ChartBar[]; row: ScanRow }) {
       <div
         ref={host}
         className="w-full flex-1"
-        style={{ minHeight: "62vh" }}
+        style={{ minHeight: "78vh" }}
         role="img"
         aria-label="Chart with 9 EMA and 20 EMA"
       />
-      <p className="pt-1 text-xs text-muted">
+      <p className="shrink-0 pt-1 text-xs text-muted">
         Green = 9 EMA · White = 20 EMA · Gold dashed = AVWAP
       </p>
     </div>
