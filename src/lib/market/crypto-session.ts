@@ -2,7 +2,8 @@
  *  When session === Crypto, keep tape rows that have a dated catalyst in 14d
  *  (live watch-flows count). Does not invent quotes.
  */
-import { cryptoSessionFilter, annotateTape, type TapeRow } from "@/data/catalysts";
+import { annotateTape, type TapeRow } from "@/data/catalysts";
+import { cryptoSessionFilter } from "@/data/catalyst-extra";
 
 export const CRYPTO_SESSION_DAYS = 14;
 
