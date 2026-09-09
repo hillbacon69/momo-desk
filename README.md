@@ -10,6 +10,17 @@ Mash **CHART** on a name.
 - Neon candles, volume, 9/20 EMA, AVWAP / HOD / LOD
 - Pattern arrows: HAMMER, DOJI, ENGULF, STAR, MORNING, EVENING, MARU
 
+## Catalyst tape
+
+Dated ETF / TGE / fee-switch / unlock calendar sits above the tape.
+
+- Data: `src/data/catalysts.ts`
+- Panel: `src/components/scanner/catalyst-panel.tsx`
+- Wire-up: `src/components/scanner/CATALYST_TAPE.md`
+- `annotateTape(rows)` adds score adj + tag. Does not invent quotes.
+
+Unlocks default fade. Watch items (ZCSH, HYPG, UNI burns) are flow, not launches.
+
 ## GROK button
 
 Opens an **Ideas** sheet (not a blank grok.com tab):
