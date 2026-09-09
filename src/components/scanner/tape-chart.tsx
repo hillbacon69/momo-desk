@@ -22,6 +22,7 @@ export type ChartGoing = {
   label: string;
   lookFor: string;
   tone: "up" | "down" | "wait";
+  catalyst?: string;
 };
 
 function emaSeries(closes: number[], period: number): (number | null)[] {
@@ -67,7 +68,6 @@ export function TapeChart({
 }: {
   bars: ChartBar[];
   row: ScanRow;
-  /** When set, Look for renders inside the charts section above the plot */
   going?: ChartGoing | null;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -239,7 +239,6 @@ export function TapeChart({
       className="flex w-full flex-col"
       style={{ height: "100%", minHeight: "calc(100dvh - 9rem)" }}
     >
-      {/* EMA legend */}
       <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 pb-1 font-mono text-sm">
         <span className="font-semibold text-up">
           9 EMA {packed.last9 != null ? formatPx(packed.last9) : "—"}
@@ -254,7 +253,6 @@ export function TapeChart({
         {row.low != null ? <span className="text-down">LOD {formatPx(row.low)}</span> : null}
       </div>
 
-      {/* LOOK FOR — inside charts section, above the plot */}
       {going ? (
         <div className="shrink-0 space-y-1 border-b border-border pb-2 pt-1">
           <p className={`text-sm font-semibold ${toneClass}`}>{going.label}</p>
@@ -262,6 +260,12 @@ export function TapeChart({
             <span className="font-mono text-xs tracking-widest text-lit uppercase">Look for · </span>
             {going.lookFor}
           </p>
+          {going.catalyst ? (
+            <p className="text-xs leading-snug text-muted">
+              <span className="font-mono text-[10px] tracking-widest text-lit uppercase">Catalyst · </span>
+              {going.catalyst}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
