@@ -15,6 +15,7 @@ export const DESK_HISTORY = [
   "Candlestick patterns: HAMMER, HANG, DOJI, STAR, ENGULF, MORNING, EVENING, MARU",
   "HUD toasts (1 min, X to dismiss) for 9/20 near AVWAP setups",
   "AVWAP = sum((H+L+C)/3 * vol) / sum(vol) from anchor",
+  "Catalyst tape: dated ETF / TGE / fee-switch / unlock calendar + annotateTape() score adj",
 ] as const;
 
 export const DESK_IDEAS = [
@@ -26,6 +27,7 @@ export const DESK_IDEAS = [
   "Crypto-only strategy presets (BTC bias + 9/20 + AVWAP)",
   "Export tape to CSV",
   "Dark/neon theme toggle",
+  "Wire CatalystPanel above tape and show catalystTag on CHART popup only",
 ] as const;
 
 function copyText(text: string) {
@@ -72,7 +74,7 @@ export function GrokIdeasSheet({
   }
 
   const defaultPrompt = [
-    "Update Momo Desk scanner with these ideas. Keep 4D neon buttons, SCAN/CLEAN, charts with 5m/15m/1H/1D, AVWAP, and candle patterns.",
+    "Update Momo Desk scanner with these ideas. Keep 4D neon buttons, SCAN/CLEAN, charts with 5m/15m/1H/1D, AVWAP, candle patterns, and the catalyst tape.",
     "",
     note.trim() || DESK_IDEAS.slice(0, 3).map((i) => `- ${i}`).join("\n"),
   ].join("\n");
