@@ -30,3 +30,10 @@ Opens an **Ideas** sheet (not a blank grok.com tab):
 - Your note + **OPEN GROK WITH PROMPT** to push updates
 
 See `src/components/scanner/GROK_BUTTON.md` and `grok-ideas.tsx`.
+
+## Scanner webhook
+
+When a name first prints A+ / setup / strong jump, the server POSTs it to `SCANNER_WEBHOOK_URL`.
+Edge only, 20-min dedupe per symbol, silent if env is missing. Copy `.env.example` to `.env`.
+
+See `src/components/scanner/SCANNER_WEBHOOK.md`.
